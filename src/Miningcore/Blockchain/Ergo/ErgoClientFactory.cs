@@ -21,13 +21,14 @@ public static class ErgoClientFactory
 
         var baseUrl = new UriBuilder(epConfig.Ssl || epConfig.Http2 ? Uri.UriSchemeHttps : Uri.UriSchemeHttp,
             epConfig.Host, epConfig.Port, epConfig.HttpPath);
-
+        var srUrl = new UriBuilder(epConfig.Ssl || epConfig.Http2 ? Uri.UriSchemeHttps : Uri.UriSchemeHttp, extra.SrHost,
+            extra.SrPort);
         var result = new ErgoClient(baseUrl.ToString(), new HttpClient(new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.All,
 
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
-        }));
+        }), srUrl.ToString());
 
         if(!string.IsNullOrEmpty(extra?.ApiKey))
             result.RequestHeaders["api_key"] = extra.ApiKey;

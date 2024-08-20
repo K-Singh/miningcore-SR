@@ -179,7 +179,7 @@ public class ErgoJobManager : JobManagerBase<ErgoJob>
 
     private async Task<WorkMessage> GetBlockTemplateAsync()
     {
-        var work = await rpc.MiningRequestBlockCandidateAsync(CancellationToken.None);
+        var work = await rpc.MiningRequestSRBlockCandidateAsync(CancellationToken.None);
 
         return work;
     }
@@ -436,7 +436,7 @@ public class ErgoJobManager : JobManagerBase<ErgoJob>
 
         do
         {
-            var work = await Guard(() => rpc.MiningRequestBlockCandidateAsync(ct),
+            var work = await Guard(() => rpc.MiningRequestSRBlockCandidateAsync(ct),
                 ex=> logger.Debug(ex));
 
             var isSynched = !string.IsNullOrEmpty(work?.Msg);

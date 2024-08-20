@@ -25,12 +25,14 @@ namespace Miningcore.Blockchain.Ergo
     public partial class ErgoClient
     {
         private string _baseUrl = "/";
+        private string _srUrl = "/";
         private System.Net.Http.HttpClient _httpClient;
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
 
-        public ErgoClient(string baseUrl, HttpClient httpClient)
+        public ErgoClient(string baseUrl, HttpClient httpClient, string srUrl)
         {
             BaseUrl = baseUrl;
+            SrUrl   = srUrl;
             _httpClient = httpClient;
             _settings = new Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -46,6 +48,12 @@ namespace Miningcore.Blockchain.Ergo
         {
             get { return _baseUrl; }
             set { _baseUrl = value; }
+        }
+
+        public string SrUrl
+        {
+            get { return _srUrl; }
+            set { _srUrl = value; }
         }
 
         protected Newtonsoft.Json.JsonSerializerSettings JsonSerializerSettings { get { return _settings.Value; } }
@@ -5595,7 +5603,73 @@ namespace Miningcore.Blockchain.Ergo
                     client_.Dispose();
             }
         }
+        public virtual async System.Threading.Tasks.Task<WorkMessage> MiningRequestSRBlockCandidateAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            var urlBuilder_ = new System.Text.StringBuilder();
+            urlBuilder_.Append(SrUrl != null ? SrUrl.TrimEnd('/') : "").Append("/blocks/query");
 
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using(var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = System.Linq.Enumerable.ToDictionary(response_.Headers, h_ => h_.Key, h_ => h_.Value);
+                        if(response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach(var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
+
+                        var status_ = (int) response_.StatusCode;
+                        if(status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<WorkMessage>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if(objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ApiError>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if(objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ApiError>("Error", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                    }
+                    finally
+                    {
+                        if(disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if(disposeClient_)
+                    client_.Dispose();
+            }
+        }
         /// <summary>
         /// Request block candidate
         /// </summary>
